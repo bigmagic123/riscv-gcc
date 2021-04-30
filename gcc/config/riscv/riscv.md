@@ -144,6 +144,9 @@
   UNSPEC_UKSUBW
   UNSPEC_UKADDH
   UNSPEC_UKSUBH
+  UNSPEC_BITREV
+  UNSPEC_CLO
+  UNSPEC_CMPEQ
 ])
 
 (define_c_enum "unspecv" [
@@ -169,6 +172,8 @@
   UNSPECV_VSETVL
   UNSPECV_VLOAD
   UNSPECV_VSTORE
+  ;; RVP
+  UNSPEC_CLROV
 ])
 
 (define_constants

@@ -310,6 +310,14 @@
 (define_predicate "shift_d_operand"
   (and (match_code "const_int")
        (match_test "INTVAL (op) == 64")))
+(define_predicate "imm3u_operand"
+  (and (match_operand 0 "const_int_operand")
+       (match_test "satisfies_constraint_u03 (op)")))
+
+(define_predicate "imm4u_operand"
+  (and (match_operand 0 "const_int_operand")
+       (match_test "satisfies_constraint_u04 (op)")))
+       
 (define_predicate "imm5u_operand"
   (and (match_operand 0 "const_int_operand")
        (match_test "satisfies_constraint_u05 (op)")))
@@ -317,6 +325,14 @@
 (define_predicate "imm6u_operand"
   (and (match_operand 0 "const_int_operand")
        (match_test "satisfies_constraint_u06 (op)")))
+
+(define_predicate "rimm3u_operand"
+  (ior (match_operand 0 "register_operand")
+       (match_operand 0 "imm3u_operand")))
+
+(define_predicate "rimm4u_operand"
+  (ior (match_operand 0 "register_operand")
+       (match_operand 0 "imm4u_operand")))
 
 (define_predicate "rimm5u_operand"
   (ior (match_operand 0 "register_operand")

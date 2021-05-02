@@ -310,6 +310,10 @@
 (define_predicate "shift_d_operand"
   (and (match_code "const_int")
        (match_test "INTVAL (op) == 64")))
+(define_predicate "imm2u_operand"
+  (and (match_operand 0 "const_int_operand")
+       (match_test "satisfies_constraint_u02 (op)")))
+
 (define_predicate "imm3u_operand"
   (and (match_operand 0 "const_int_operand")
        (match_test "satisfies_constraint_u03 (op)")))

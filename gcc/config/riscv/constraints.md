@@ -168,6 +168,11 @@
   "POLY_INT"
   (and (match_code "const_poly_int")
        (match_test "CONST_POLY_INT_COEFFS (op)[0] == UNITS_PER_V_REG.coeffs[0]")))
+(define_constraint "u02"
+  "Unsigned immediate 2-bit value"
+  (and (match_code "const_int")
+       (match_test "ival < (1 << 2) && ival >= 0")))
+
 (define_constraint "u03"
   "Unsigned immediate 3-bit value"
   (and (match_code "const_int")

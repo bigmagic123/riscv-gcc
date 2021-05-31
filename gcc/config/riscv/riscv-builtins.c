@@ -92,7 +92,8 @@ along with GCC; see the file COPYING3.  If not see
 #define RISCV_FTYPE_NAME1(A, B) RISCV_##A##_FTYPE_##B
 #define RISCV_FTYPE_NAME2(A, B, C) RISCV_##A##_FTYPE_##B##_##C
 #define RISCV_FTYPE_NAME3(A, B, C, D) RISCV_##A##_FTYPE_##B##_##C##_##D
-#define RISCV_FTYPE_NAME4(A, B, C, D, E) RISCV_##A##_FTYPE_##B##_##C##_##D##_##E
+#define RISCV_FTYPE_NAME4(A, B, C, D, E) \
+  RISCV_##A##_FTYPE_##B##_##C##_##D##_##E
 #define RISCV_FTYPE_NAME5(A, B, C, D, E, F) \
   RISCV_##A##_FTYPE_##B##_##C##_##D##_##E##_##F
 #define RISCV_FTYPE_NAME6(A, B, C, D, E, F, G) \
@@ -152,6 +153,17 @@ struct riscv_builtin_description {
 AVAIL (hard_float, TARGET_HARD_FLOAT)
 AVAIL (vector, TARGET_VECTOR)
 
+/* p ext */
+AVAIL (zpn, TARGET_ZPN)
+AVAIL (zpn64, TARGET_ZPN && TARGET_64BIT)
+AVAIL (zpn32, TARGET_ZPN && !TARGET_64BIT)
+
+AVAIL (zprv, TARGET_ZPRV && TARGET_64BIT)
+
+AVAIL (zpsf, TARGET_ZPSF)
+AVAIL (zpsf32, TARGET_ZPSF && !TARGET_64BIT)
+AVAIL (zpsf64, TARGET_ZPSF && TARGET_64BIT)
+
 /* Construct a riscv_builtin_description from the given arguments.
 
    INSN is the name of the associated instruction pattern, without the
@@ -207,6 +219,24 @@ AVAIL (vector, TARGET_VECTOR)
 
 #define MV_XS_NAMED(INSN, NAME, FUNCTION_TYPE, AVAIL)			\
   RISCV_NAMED (INSN, #NAME, RISCV_BUILTIN_MV_XS, FUNCTION_TYPE, AVAIL)
+
+/* Define __builtin_riscv_<NAME>, which is a RISCV_BUILTIN_DIRECT function
+   mapped to instruction CODE_FOR_<INSN>,  FUNCTION_TYPE and AVAIL
+   are as for RISCV_BUILTIN.  */
+#define DIRECT_BUILTIN_NO_PREFIX(INSN, NAME, FUNCTION_TYPE, AVAIL)			\
+  { CODE_FOR_ ## INSN, "__builtin_riscv_" # NAME,			\
+    RISCV_BUILTIN_DIRECT, FUNCTION_TYPE, riscv_builtin_avail_ ## AVAIL }
+
+/* Define __builtin_riscv_<NAME>, which is a RISCV_BUILTIN_DIRECT_NO_TARGET function
+   mapped to instruction CODE_FOR_<INSN>,  FUNCTION_TYPE and AVAIL
+   are as for RISCV_BUILTIN.  */
+#define DIRECT_NO_TARGET_BUILTIN_NO_PREFIX(INSN, NAME, FUNCTION_TYPE, AVAIL)			\
+  { CODE_FOR_ ## INSN, "__builtin_riscv_" # NAME,			\
+    RISCV_BUILTIN_DIRECT_NO_TARGET, FUNCTION_TYPE, riscv_builtin_avail_ ## AVAIL }
+
+/* type nodes for target-specific width support (xlen_t) */
+tree uint_xlen_node;
+tree int_xlen_node;
 
 /* Argument types.  */
 #define RISCV_ATYPE_VOID void_type_node
@@ -499,6 +529,37 @@ _RVV_SEG_NO_SEW8_ARG (RISCV_DECL_FSEG_TYPES, X)
   tree rvvuint##SEW##m##LMUL##x##NR##_t_node;
 
 _RVV_SEG_ARG (RISCV_DECL_SEG_TYPES, X)
+#define RISCV_ATYPE_USI unsigned_intSI_type_node
+#define RISCV_ATYPE_SI intSI_type_node
+#define RISCV_ATYPE_DI intDI_type_node
+#define RISCV_ATYPE_UDI unsigned_intDI_type_node
+#define RISCV_ATYPE_ULONG long_unsigned_type_node
+#define RISCV_ATYPE_LONG long_integer_type_node
+#define RISCV_ATYPE_LLONG long_long_integer_type_node
+#define RISCV_ATYPE_ULLONG  long_long_unsigned_type_node
+#define RISCV_ATYPE_PSI build_pointer_type (integer_type_node)
+#define RISCV_ATYPE_PUSI build_pointer_type (unsigned_type_node)
+#define RISCV_ATYPE_PLLONG build_pointer_type (long_long_integer_type_node)
+#define RISCV_ATYPE_PULLONG build_pointer_type (long_long_unsigned_type_node)
+#define RISCV_ATYPE_TI intTI_type_node
+#define RISCV_ATYPE_UTI unsigned_intTI_type_node
+#define RISCV_ATYPE_V4QI build_vector_type (intQI_type_node, 4)
+#define RISCV_ATYPE_UV4QI build_vector_type (unsigned_intQI_type_node, 4)
+#define RISCV_ATYPE_V8QI build_vector_type (intQI_type_node, 8)
+#define RISCV_ATYPE_UV8QI build_vector_type (unsigned_intQI_type_node, 8)
+#define RISCV_ATYPE_V2HI build_vector_type (intHI_type_node, 2)
+#define RISCV_ATYPE_UV2HI build_vector_type (unsigned_intHI_type_node, 2)
+#define RISCV_ATYPE_V4HI build_vector_type (intHI_type_node, 4)
+#define RISCV_ATYPE_UV4HI build_vector_type (unsigned_intHI_type_node, 4)
+#define RISCV_ATYPE_V2SI build_vector_type (intSI_type_node, 2)
+#define RISCV_ATYPE_UV2SI build_vector_type (unsigned_intSI_type_node, 2)
+#define RISCV_ATYPE_V4SI build_vector_type (intSI_type_node, 4)
+#define RISCV_ATYPE_UV4SI build_vector_type (unsigned_intSI_type_node, 4)
+#define RISCV_ATYPE_V8HI build_vector_type (intHI_type_node, 8)
+#define RISCV_ATYPE_UV8HI build_vector_type (unsigned_intHI_type_node, 8)
+
+#define RISCV_ATYPE_IXLEN  int_xlen_node
+#define RISCV_ATYPE_UIXLEN uint_xlen_node
 
 /* RISCV_FTYPE_ATYPESN takes N RISCV_FTYPES-like type codes and lists
    their associated RISCV_ATYPEs.  */
@@ -508,7 +569,7 @@ _RVV_SEG_ARG (RISCV_DECL_SEG_TYPES, X)
   RISCV_ATYPE_##A, RISCV_ATYPE_##B
 #define RISCV_FTYPE_ATYPES2(A, B, C) \
   RISCV_ATYPE_##A, RISCV_ATYPE_##B, RISCV_ATYPE_##C
-#define RISCV_FTYPE_ATYPES3(A, B, C, D)	\
+#define RISCV_FTYPE_ATYPES3(A, B, C, D) \
   RISCV_ATYPE_##A, RISCV_ATYPE_##B, RISCV_ATYPE_##C, RISCV_ATYPE_##D
 #define RISCV_FTYPE_ATYPES4(A, B, C, D, E) \
   RISCV_ATYPE_##A, RISCV_ATYPE_##B, RISCV_ATYPE_##C, RISCV_ATYPE_##D, \
@@ -2384,6 +2445,7 @@ _RVV_SEG_ARG (RISCV_DECL_SEG_TYPES, X)
     vector),
 
 static const struct riscv_builtin_description riscv_builtins[] = {
+  #include "riscv-builtins-rvp.def"
   DIRECT_BUILTIN (frflags, RISCV_USI_FTYPE, hard_float),
   DIRECT_NO_TARGET_BUILTIN (fsflags, RISCV_VOID_FTYPE_USI, hard_float),
 
@@ -3095,6 +3157,17 @@ _RVV_SEG_ARG (RISCV_DEFINE_SEG_TYPES, X)
 
     }
 
+  if (TARGET_64BIT) 
+  {
+    int_xlen_node  = intDI_type_node;
+    uint_xlen_node = unsigned_intDI_type_node;
+  } 
+    else
+  {
+    int_xlen_node  = intSI_type_node;
+    uint_xlen_node = unsigned_intSI_type_node;
+  } 
+  
   for (size_t i = 0; i < ARRAY_SIZE (riscv_builtins); i++)
     {
       const struct riscv_builtin_description *d = &riscv_builtins[i];

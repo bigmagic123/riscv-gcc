@@ -65,6 +65,8 @@ riscv_implied_info_t riscv_implied_info[] =
   {"zvqmac", "v"},
   {"zvqmac", "zvamo"},
   {"zvqmac", "zvlsseg"},
+  {"p", "zpn"},
+  {"p", "zpsf"},
   {NULL, NULL}
 };
 
@@ -755,6 +757,41 @@ riscv_arch_str (bool version_p)
   gcc_assert (current_subset_list);
   return current_subset_list->to_string (version_p);
 }
+
+/* Type for pointer to member of gcc_options.  */
+typedef int (gcc_options::*opt_var_ref_t);
+
+/* Types for recording extension to internal flag.  */
+struct riscv_ext_flag_table_t {
+  const char *ext;
+  opt_var_ref_t var_ref;
+  int mask;
+};
+
+/* Mapping table between extension to internal flag.  */
+static const riscv_ext_flag_table_t riscv_ext_flag_table[] =
+{
+  {"e", &gcc_options::x_target_flags, MASK_RVE},
+  {"m", &gcc_options::x_target_flags, MASK_MUL},
+  {"a", &gcc_options::x_target_flags, MASK_ATOMIC},
+  {"f", &gcc_options::x_target_flags, MASK_HARD_FLOAT},
+  {"d", &gcc_options::x_target_flags, MASK_DOUBLE_FLOAT},
+  {"c", &gcc_options::x_target_flags, MASK_RVC},
+
+  {"zkg", &gcc_options::x_riscv_crypto_subext, MASK_ZKG},
+  {"zkb", &gcc_options::x_riscv_crypto_subext, MASK_ZKB},
+  {"zkr", &gcc_options::x_riscv_crypto_subext, MASK_ZKR},
+  {"zkne", &gcc_options::x_riscv_crypto_subext, MASK_ZKNE},
+  {"zknd", &gcc_options::x_riscv_crypto_subext, MASK_ZKND},
+  {"zknh", &gcc_options::x_riscv_crypto_subext, MASK_ZKNH},
+  {"zksed", &gcc_options::x_riscv_crypto_subext, MASK_ZKSED},
+  {"zksh", &gcc_options::x_riscv_crypto_subext, MASK_ZKSH},
+
+  {"zpn",  &gcc_options::x_riscv_rvp_subext, MASK_ZPN},
+  {"zprv", &gcc_options::x_riscv_rvp_subext, MASK_ZPRV},
+  {"zpsf", &gcc_options::x_riscv_rvp_subext, MASK_ZPSF},
+  {NULL, NULL, 0}
+};
 
 /* Parse a RISC-V ISA string into an option mask.  Must clear or set all arch
    dependent mask bits, in case more than one -march string is passed.  */

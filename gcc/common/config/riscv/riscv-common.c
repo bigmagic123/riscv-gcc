@@ -51,23 +51,25 @@ struct riscv_implied_info_t
 {
   const char *ext;
   const char *implied_ext;
+  unsigned int xlen_requirement;
 };
 
 /* Implied ISA info, must end with NULL sentinel.  */
 riscv_implied_info_t riscv_implied_info[] =
 {
-  {"d", "f"},
+  {"d", "f", 0},
   /* XXX: Work-around, zvbase + zvamo + zvlsseg, but zvbase not defined yet.  */
-  {"v", "zvamo"},
-  {"v", "zvlsseg"},
+  {"v", "zvamo", 0},
+  {"v", "zvlsseg", 0},
 
   /* XXX: Work-around, zvqmac need v, and v implied zvamo and zvlsseg.  */
-  {"zvqmac", "v"},
-  {"zvqmac", "zvamo"},
-  {"zvqmac", "zvlsseg"},
-  {"p", "zpn"},
-  {"p", "zpsf"},
-  {NULL, NULL}
+  {"zvqmac", "v", 0},
+  {"zvqmac", "zvamo", 0},
+  {"zvqmac", "zvlsseg", 0},
+  {"p", "zpn", 0},
+  {"p", "zprv", 64},
+  {"p", "zpsf", 0},
+  {NULL, NULL, NULL}
 };
 
 /* Subset list.  */
@@ -583,9 +585,14 @@ riscv_subset_list::handle_implied_ext (const char *ext,
       if (lookup (implied_info->implied_ext))
 	continue;
 
-      /* TODO: Implied extension might use different version.  */
+	  /* Skip if xlen requirement does not match.  */
+      if ((implied_info->xlen_requirement != 0)
+          && (xlen () != implied_info->xlen_requirement))
+	continue;
+
+	/* TODO: Implied extension might use different version.  */
       add (implied_info->implied_ext, major_version, minor_version,
-	   explicit_version_p);
+          explicit_version_p);
     }
 }
 

@@ -38,6 +38,9 @@ along with GCC; see the file COPYING3.  If not see
 #include "langhooks.h"
 #include "stringpool.h"
 #include "riscv-vector-iterator.h"
+#include "function.h"
+#include "emit-rtl.h"
+#include "explow.h"
 
 /* We don't want the PTR definition from ansi-decl.h.  */
 #undef PTR
@@ -91,7 +94,8 @@ along with GCC; see the file COPYING3.  If not see
 #define RISCV_FTYPE_NAME1(A, B) RISCV_##A##_FTYPE_##B
 #define RISCV_FTYPE_NAME2(A, B, C) RISCV_##A##_FTYPE_##B##_##C
 #define RISCV_FTYPE_NAME3(A, B, C, D) RISCV_##A##_FTYPE_##B##_##C##_##D
-#define RISCV_FTYPE_NAME4(A, B, C, D, E) RISCV_##A##_FTYPE_##B##_##C##_##D##_##E
+#define RISCV_FTYPE_NAME4(A, B, C, D, E) \
+  RISCV_##A##_FTYPE_##B##_##C##_##D##_##E
 #define RISCV_FTYPE_NAME5(A, B, C, D, E, F) \
   RISCV_##A##_FTYPE_##B##_##C##_##D##_##E##_##F
 #define RISCV_FTYPE_NAME6(A, B, C, D, E, F, G) \
@@ -151,6 +155,17 @@ struct riscv_builtin_description {
 AVAIL (hard_float, TARGET_HARD_FLOAT)
 AVAIL (vector, TARGET_VECTOR)
 
+/* p ext */
+AVAIL (zpn, TARGET_ZPN)
+AVAIL (zpn64, TARGET_ZPN && TARGET_64BIT)
+AVAIL (zpn32, TARGET_ZPN && !TARGET_64BIT)
+
+AVAIL (zprv, TARGET_ZPRV && TARGET_64BIT)
+
+AVAIL (zpsf, TARGET_ZPSF)
+AVAIL (zpsf32, TARGET_ZPSF && !TARGET_64BIT)
+AVAIL (zpsf64, TARGET_ZPSF && TARGET_64BIT)
+
 /* Construct a riscv_builtin_description from the given arguments.
 
    INSN is the name of the associated instruction pattern, without the
@@ -207,18 +222,65 @@ AVAIL (vector, TARGET_VECTOR)
 #define MV_XS_NAMED(INSN, NAME, FUNCTION_TYPE, AVAIL)			\
   RISCV_NAMED (INSN, #NAME, RISCV_BUILTIN_MV_XS, FUNCTION_TYPE, AVAIL)
 
+/* Define __builtin_riscv_<NAME>, which is a RISCV_BUILTIN_DIRECT function
+   mapped to instruction CODE_FOR_<INSN>,  FUNCTION_TYPE and AVAIL
+   are as for RISCV_BUILTIN.  */
+#define DIRECT_BUILTIN_NO_PREFIX(INSN, NAME, FUNCTION_TYPE, AVAIL)			\
+  { CODE_FOR_ ## INSN, "__builtin_riscv_" # NAME,			\
+    RISCV_BUILTIN_DIRECT, FUNCTION_TYPE, riscv_builtin_avail_ ## AVAIL }
+
+/* Define __builtin_riscv_<NAME>, which is a RISCV_BUILTIN_DIRECT_NO_TARGET function
+   mapped to instruction CODE_FOR_<INSN>,  FUNCTION_TYPE and AVAIL
+   are as for RISCV_BUILTIN.  */
+#define DIRECT_NO_TARGET_BUILTIN_NO_PREFIX(INSN, NAME, FUNCTION_TYPE, AVAIL)			\
+  { CODE_FOR_ ## INSN, "__builtin_riscv_" # NAME,			\
+    RISCV_BUILTIN_DIRECT_NO_TARGET, FUNCTION_TYPE, riscv_builtin_avail_ ## AVAIL }
+
+/* type nodes for target-specific width support (xlen_t) */
+tree uint_xlen_node;
+tree int_xlen_node;
+
 /* Argument types.  */
 #define RISCV_ATYPE_VOID void_type_node
 #define RISCV_ATYPE_UQI unsigned_int8_type_node
 #define RISCV_ATYPE_UHI unsigned_int16_type_node
 #define RISCV_ATYPE_USI unsigned_int32_type_node
-#define RISCV_ATYPE_UDI unsigned_int64_type_node
+//#define RISCV_ATYPE_UDI unsigned_int64_type_node
 #define RISCV_ATYPE_QI int8_type_node
 #define RISCV_ATYPE_HI int16_type_node
 #define RISCV_ATYPE_SI int32_type_node
 #define RISCV_ATYPE_DI int64_type_node
 #define RISCV_ATYPE_SIZE size_type_node
+//#define RISCV_ATYPE_LONG long_integer_type_node
+
+#define RISCV_ATYPE_UDI unsigned_intDI_type_node
+#define RISCV_ATYPE_ULONG long_unsigned_type_node
 #define RISCV_ATYPE_LONG long_integer_type_node
+#define RISCV_ATYPE_LLONG long_long_integer_type_node
+#define RISCV_ATYPE_ULLONG  long_long_unsigned_type_node
+#define RISCV_ATYPE_PSI build_pointer_type (integer_type_node)
+#define RISCV_ATYPE_PUSI build_pointer_type (unsigned_type_node)
+#define RISCV_ATYPE_PLLONG build_pointer_type (long_long_integer_type_node)
+#define RISCV_ATYPE_PULLONG build_pointer_type (long_long_unsigned_type_node)
+#define RISCV_ATYPE_TI intTI_type_node
+#define RISCV_ATYPE_UTI unsigned_intTI_type_node
+#define RISCV_ATYPE_V4QI build_vector_type (intQI_type_node, 4)
+#define RISCV_ATYPE_UV4QI build_vector_type (unsigned_intQI_type_node, 4)
+#define RISCV_ATYPE_V8QI build_vector_type (intQI_type_node, 8)
+#define RISCV_ATYPE_UV8QI build_vector_type (unsigned_intQI_type_node, 8)
+#define RISCV_ATYPE_V2HI build_vector_type (intHI_type_node, 2)
+#define RISCV_ATYPE_UV2HI build_vector_type (unsigned_intHI_type_node, 2)
+#define RISCV_ATYPE_V4HI build_vector_type (intHI_type_node, 4)
+#define RISCV_ATYPE_UV4HI build_vector_type (unsigned_intHI_type_node, 4)
+#define RISCV_ATYPE_V2SI build_vector_type (intSI_type_node, 2)
+#define RISCV_ATYPE_UV2SI build_vector_type (unsigned_intSI_type_node, 2)
+#define RISCV_ATYPE_V4SI build_vector_type (intSI_type_node, 4)
+#define RISCV_ATYPE_UV4SI build_vector_type (unsigned_intSI_type_node, 4)
+#define RISCV_ATYPE_V8HI build_vector_type (intHI_type_node, 8)
+#define RISCV_ATYPE_UV8HI build_vector_type (unsigned_intHI_type_node, 8)
+
+#define RISCV_ATYPE_IXLEN  int_xlen_node
+#define RISCV_ATYPE_UIXLEN uint_xlen_node
 
 #define RISCV_ATYPE_PTRDIFF ptrdiff_type_node
 
@@ -2275,6 +2337,7 @@ _RVV_SEG_ARG (RISCV_DECL_SEG_TYPES, X)
     vector),
 
 static const struct riscv_builtin_description riscv_builtins[] = {
+  #include "riscv-builtins-rvp.def"
   DIRECT_BUILTIN (frflags, RISCV_USI_FTYPE, hard_float),
   DIRECT_NO_TARGET_BUILTIN (fsflags, RISCV_VOID_FTYPE_USI, hard_float),
 
@@ -2891,6 +2954,17 @@ _RVV_SEG_ARG (RISCV_DEFINE_SEG_TYPES, X)
 
     }
 
+  if (TARGET_64BIT) 
+  {
+    int_xlen_node  = intDI_type_node;
+    uint_xlen_node = unsigned_intDI_type_node;
+  } 
+    else
+  {
+    int_xlen_node  = intSI_type_node;
+    uint_xlen_node = unsigned_intSI_type_node;
+  } 
+  
   for (size_t i = 0; i < ARRAY_SIZE (riscv_builtins); i++)
     {
       const struct riscv_builtin_description *d = &riscv_builtins[i];
@@ -2917,12 +2991,99 @@ riscv_builtin_decl (unsigned int code, bool initialize_p ATTRIBUTE_UNUSED)
 /* Take argument ARGNO from EXP's argument list and convert it into
    an expand operand.  Store the operand in *OP.  */
 
+// static void
+// riscv_prepare_builtin_arg (struct expand_operand *op, tree exp, unsigned argno,
+// 			   enum insn_code icode, bool has_target_p)
+// {
+//   rtx arg_rtx = expand_normal (CALL_EXPR_ARG (exp, argno));
+//   enum machine_mode mode = insn_data[icode].operand[argno + has_target_p].mode;
+    
+//   if (TARGET_ZPN &&
+//       !(*insn_data[icode].operand[argno + has_target_p].predicate) (arg_rtx, mode))
+//     {
+//       rtx tmp_rtx = gen_reg_rtx (mode);
+//      if (GET_MODE_SIZE (mode).to_constant() < GET_MODE_SIZE (GET_MODE (arg_rtx)).to_constant())
+// 	{
+// 	  tmp_rtx = simplify_gen_subreg (mode, arg_rtx, GET_MODE (arg_rtx), 0);
+// 	  arg_rtx = tmp_rtx;
+// 	}
+//       else if (VECTOR_MODE_P (mode) && CONST_INT_P (arg_rtx))
+// 	{
+// 	  /* Handle CONST_INT covert to CONST_VECTOR.  */
+// 	  int nunits = GET_MODE_NUNITS (mode).to_constant();
+// 	  int i, shift = 0;
+    
+// 	  rtvec v = rtvec_alloc (nunits);
+// 	  HOST_WIDE_INT val = INTVAL (arg_rtx);
+// 	  enum machine_mode val_mode = GET_MODE_INNER (mode);
+// 	  int shift_acc = GET_MODE_BITSIZE (val_mode).to_constant();
+// 	  unsigned HOST_WIDE_INT mask = GET_MODE_MASK (val_mode);
+// 	  HOST_WIDE_INT tmp_val = val;
+// 	  for (i = 0; i < nunits; i++)
+// 	    {
+// 	      tmp_val = (val >> shift) & mask;
+// 	      RTVEC_ELT (v, i) = gen_int_mode (tmp_val, val_mode);
+// 	      shift += shift_acc;
+// 	    }
+
+// 	  arg_rtx = copy_to_mode_reg (mode, gen_rtx_CONST_VECTOR (mode, v));
+// 	}
+//       else
+// 	{
+// 	  convert_move (tmp_rtx, arg_rtx, false);
+// 	  arg_rtx = tmp_rtx;
+// 	}
+//     }
+//   create_input_operand (op, arg_rtx, mode);
+// }
+
 static void
-riscv_prepare_builtin_arg (struct expand_operand *op, tree exp, unsigned argno)
+riscv_prepare_builtin_arg (struct expand_operand *op, tree exp, unsigned argno,
+		enum insn_code icode, bool has_target_p)
 {
-  tree arg = CALL_EXPR_ARG (exp, argno);
-  create_input_operand (op, expand_normal (arg), TYPE_MODE (TREE_TYPE (arg)));
+  enum machine_mode mode = insn_data[icode].operand[argno + has_target_p].mode;
+  rtx arg = expand_normal (CALL_EXPR_ARG (exp, argno));
+  rtx tmp_rtx = gen_reg_rtx (mode);
+
+  printf("cccc\n");
+  if (!(*insn_data[icode].operand[argno + has_target_p].predicate) (arg, mode))
+    {
+      if (GET_MODE_SIZE (mode).to_constant() < GET_MODE_SIZE (GET_MODE (arg)).to_constant())
+	{
+	  tmp_rtx = simplify_gen_subreg (mode, arg, GET_MODE (arg), 0);
+	  arg = tmp_rtx;
+	}
+      else if (VECTOR_MODE_P (mode) && CONST_INT_P (arg))
+	{
+	  /* Handle CONST_INT covert to CONST_VECTOR.  */
+	  int nunits = GET_MODE_NUNITS (mode).to_constant();
+	  int i, shift = 0;
+	  rtvec v = rtvec_alloc (nunits);
+	  HOST_WIDE_INT val = INTVAL (arg);
+	  enum machine_mode val_mode = GET_MODE_INNER (mode);
+	  int shift_acc = GET_MODE_BITSIZE (val_mode).to_constant();
+	  unsigned HOST_WIDE_INT mask = GET_MODE_MASK (val_mode);
+	  HOST_WIDE_INT tmp_val = val;
+
+	  for (i = 0; i < nunits; i++)
+	    {
+		tmp_val = (val >> shift) & mask;
+		RTVEC_ELT (v, i) = gen_int_mode (tmp_val, val_mode);
+		shift += shift_acc;
+	    }
+
+	  arg = copy_to_mode_reg (mode, gen_rtx_CONST_VECTOR (mode, v));
+	}
+      else
+	{
+	  convert_move (tmp_rtx, arg, false);
+	  arg = tmp_rtx;
+	}
+  }
+
+  create_input_operand (op, arg, mode);
 }
+
 
 /* Expand instruction ICODE as part of a built-in function sequence.
    Use the first NOPS elements of OPS as the instruction's operands.
@@ -2970,14 +3131,39 @@ riscv_expand_builtin_direct (enum insn_code icode, rtx target, tree exp,
 
   /* Map any target to operand 0.  */
   int opno = 0;
-  if (has_target_p)
-    create_output_operand (&ops[opno++], target, TYPE_MODE (TREE_TYPE (exp)));
+  enum machine_mode insn_return_mode = insn_data[icode].operand[opno].mode;
+  enum machine_mode mode = TYPE_MODE (TREE_TYPE (exp));
 
+  // if (has_target_p)
+  //   {
+  //     /* p extension vector and scalar mode convension */
+  //     if (TARGET_ZPN &&
+  //         (!target
+  //         || GET_MODE (target) != insn_return_mode
+  //         || ! (*insn_data[icode].operand[opno].predicate) (target, insn_return_mode)))
+  // {
+  //   mode = insn_return_mode;
+  //   target = gen_reg_rtx (mode);
+  // }
+
+  //     create_output_operand (&ops[opno++], target, mode);
+  //   }
+
+    if (has_target_p)
+    {
+      if (! target
+	  || GET_MODE (target) != mode
+	  || ! (*insn_data[icode].operand[0].predicate) (target, mode))
+	target = gen_reg_rtx (mode);
+	create_output_operand(&ops[opno++], target, mode);
+    }
   /* Map the arguments to the other operands.  */
   gcc_assert (opno + call_expr_nargs (exp)
 	      == insn_data[icode].n_generator_args);
   for (int argno = 0; argno < call_expr_nargs (exp); argno++)
-    riscv_prepare_builtin_arg (&ops[opno++], exp, argno);
+  {
+    riscv_prepare_builtin_arg (&ops[opno++], exp, argno, icode, has_target_p);
+  }
 
   return riscv_expand_builtin_insn (icode, opno, ops, has_target_p);
 }

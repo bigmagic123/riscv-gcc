@@ -58,10 +58,10 @@
 (define_code_iterator any_float [float unsigned_float])
 
 ;; All operation valid for all add.
-(define_code_iterator all_plus [plus ss_plus us_plus])
+;; (define_code_iterator all_plus [plus ss_plus us_plus])
 
 ;; All operation valid for all subtract.
-(define_code_iterator all_minus [minus ss_minus us_minus])
+;; (define_code_iterator all_minus [minus ss_minus us_minus])
 
 ;; All operation valid for minus and ss_minus.
 (define_code_iterator sub_and_ssub [minus ss_minus])

@@ -4946,6 +4946,14 @@ riscv_hard_regno_mode_ok (unsigned int regno, machine_mode mode)
 	!= call_used_or_fixed_reg_p (regno + i))
       return false;
 
+  /* use even/odd pair of registers in rv32 zpsf subset */
+  if (TARGET_ZPSF && !TARGET_64BIT)
+    {
+      if ((GET_MODE_CLASS (mode) == MODE_INT || 
+          GET_MODE_CLASS (mode) == MODE_VECTOR_INT) &&
+          GET_MODE_UNIT_SIZE (mode) == GET_MODE_SIZE (DImode))
+        return !(regno & 1);
+    }
   return true;
 }
 
@@ -5960,6 +5968,18 @@ riscv_floatn_mode (int n, bool extended)
 static bool
 riscv_vector_mode_supported_p (machine_mode mode)
 {
+  /* a few instructions(e.g. kdmabb) in RV64P also supports V2HI */
+  if (mode == V2HImode)
+    return TARGET_ZPN;
+
+  if (mode == V4QImode)
+    return TARGET_ZPN && !TARGET_64BIT;
+
+  if (mode == V8QImode
+      || mode == V4HImode
+      || mode == V2SImode)
+    return TARGET_ZPN && TARGET_64BIT;
+
   if (TARGET_VECTOR && riscv_vector_mode (mode))
     return true;
 
@@ -6386,8 +6406,8 @@ riscv_verify_type_context (location_t loc, type_context_kind context,
 #undef TARGET_FLOATN_MODE
 #define TARGET_FLOATN_MODE riscv_floatn_mode
 
-#undef TARGET_VECTOR_MODE_SUPPORTED_P
-#define TARGET_VECTOR_MODE_SUPPORTED_P riscv_vector_mode_supported_p
+// #undef TARGET_VECTOR_MODE_SUPPORTED_P
+// #define TARGET_VECTOR_MODE_SUPPORTED_P riscv_vector_mode_supported_p
 
 #undef TARGET_VECTORIZE_PREFERRED_SIMD_MODE
 #define TARGET_VECTORIZE_PREFERRED_SIMD_MODE riscv_preferred_simd_mode
@@ -6401,6 +6421,10 @@ riscv_verify_type_context (location_t loc, type_context_kind context,
 
 #undef TARGET_VERIFY_TYPE_CONTEXT
 #define TARGET_VERIFY_TYPE_CONTEXT riscv_verify_type_context
+
+/* rvp */
+#undef TARGET_VECTOR_MODE_SUPPORTED_P
+#define TARGET_VECTOR_MODE_SUPPORTED_P riscv_vector_mode_supported_p
 
 struct gcc_target targetm = TARGET_INITIALIZER;
 

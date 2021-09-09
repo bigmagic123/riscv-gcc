@@ -51,21 +51,25 @@ struct riscv_implied_info_t
 {
   const char *ext;
   const char *implied_ext;
+  unsigned int xlen_requirement;
 };
 
 /* Implied ISA info, must end with NULL sentinel.  */
 riscv_implied_info_t riscv_implied_info[] =
 {
-  {"d", "f"},
+  {"d", "f", 0},
   /* XXX: Work-around, zvbase + zvamo + zvlsseg, but zvbase not defined yet.  */
-  {"v", "zvamo"},
-  {"v", "zvlsseg"},
+  {"v", "zvamo", 0},
+  {"v", "zvlsseg", 0},
 
   /* XXX: Work-around, zvqmac need v, and v implied zvamo and zvlsseg.  */
-  {"zvqmac", "v"},
-  {"zvqmac", "zvamo"},
-  {"zvqmac", "zvlsseg"},
-  {NULL, NULL}
+  {"zvqmac", "v", 0},
+  {"zvqmac", "zvamo", 0},
+  {"zvqmac", "zvlsseg", 0},
+  {"p", "zpn", 0},
+  {"p", "zprv", 64},
+  {"p", "zpsf", 0},
+  {NULL, NULL, NULL}
 };
 
 /* Subset list.  */
@@ -581,9 +585,14 @@ riscv_subset_list::handle_implied_ext (const char *ext,
       if (lookup (implied_info->implied_ext))
 	continue;
 
-      /* TODO: Implied extension might use different version.  */
+	  /* Skip if xlen requirement does not match.  */
+      if ((implied_info->xlen_requirement != 0)
+          && (xlen () != implied_info->xlen_requirement))
+	continue;
+
+	/* TODO: Implied extension might use different version.  */
       add (implied_info->implied_ext, major_version, minor_version,
-	   explicit_version_p);
+          explicit_version_p);
     }
 }
 
@@ -755,6 +764,32 @@ riscv_arch_str (bool version_p)
   gcc_assert (current_subset_list);
   return current_subset_list->to_string (version_p);
 }
+
+/* Type for pointer to member of gcc_options.  */
+typedef int (gcc_options::*opt_var_ref_t);
+
+/* Types for recording extension to internal flag.  */
+struct riscv_ext_flag_table_t {
+  const char *ext;
+  opt_var_ref_t var_ref;
+  int mask;
+};
+
+/* Mapping table between extension to internal flag.  */
+static const riscv_ext_flag_table_t riscv_ext_flag_table[] =
+{
+  {"e", &gcc_options::x_target_flags, MASK_RVE},
+  {"m", &gcc_options::x_target_flags, MASK_MUL},
+  {"a", &gcc_options::x_target_flags, MASK_ATOMIC},
+  {"f", &gcc_options::x_target_flags, MASK_HARD_FLOAT},
+  {"d", &gcc_options::x_target_flags, MASK_DOUBLE_FLOAT},
+  {"c", &gcc_options::x_target_flags, MASK_RVC},
+
+  {"zpn",  &gcc_options::x_riscv_rvp_subext, MASK_ZPN},
+  {"zprv", &gcc_options::x_riscv_rvp_subext, MASK_ZPRV},
+  {"zpsf", &gcc_options::x_riscv_rvp_subext, MASK_ZPSF},
+  {NULL, NULL, 0}
+};
 
 /* Parse a RISC-V ISA string into an option mask.  Must clear or set all arch
    dependent mask bits, in case more than one -march string is passed.  */

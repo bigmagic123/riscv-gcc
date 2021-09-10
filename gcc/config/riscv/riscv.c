@@ -5816,14 +5816,14 @@ riscv_floatn_mode (int n, bool extended)
 
 /* Implement TARGET_VECTOR_MODE_SUPPORTED_P.  */
 
-static bool
-riscv_vector_mode_supported_p (machine_mode mode)
-{
-  if (TARGET_VECTOR && riscv_vector_mode (mode))
-    return true;
+// static bool
+// riscv_vector_mode_supported_p (machine_mode mode)
+// {
+//   if (TARGET_VECTOR && riscv_vector_mode (mode))
+//     return true;
 
-  return false;
-}
+//   return false;
+// }
 
 /* Implement TARGET_VECTORIZE_PREFERRED_SIMD_MODE.  */
 
@@ -6051,6 +6051,9 @@ riscv_verify_type_context (location_t loc, type_context_kind context,
 bool
 riscv_vector_mode_supported_p (enum machine_mode mode)
 {
+  if (TARGET_VECTOR && riscv_vector_mode (mode))
+    return true;
+
   /* a few instructions(e.g. kdmabb) in RV64P also supports V2HI */
   if (mode == V2HImode)
     return TARGET_ZPN;
@@ -6263,8 +6266,8 @@ riscv_vector_mode_supported_p (enum machine_mode mode)
 #undef TARGET_FLOATN_MODE
 #define TARGET_FLOATN_MODE riscv_floatn_mode
 
-#undef TARGET_VECTOR_MODE_SUPPORTED_P
-#define TARGET_VECTOR_MODE_SUPPORTED_P riscv_vector_mode_supported_p
+//#undef TARGET_VECTOR_MODE_SUPPORTED_P
+//#define TARGET_VECTOR_MODE_SUPPORTED_P riscv_vector_mode_supported_p
 
 #undef TARGET_VECTORIZE_PREFERRED_SIMD_MODE
 #define TARGET_VECTORIZE_PREFERRED_SIMD_MODE riscv_preferred_simd_mode

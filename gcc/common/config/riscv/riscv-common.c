@@ -784,16 +784,6 @@ static const riscv_ext_flag_table_t riscv_ext_flag_table[] =
   {"f", &gcc_options::x_target_flags, MASK_HARD_FLOAT},
   {"d", &gcc_options::x_target_flags, MASK_DOUBLE_FLOAT},
   {"c", &gcc_options::x_target_flags, MASK_RVC},
-
-  {"zkg", &gcc_options::x_riscv_crypto_subext, MASK_ZKG},
-  {"zkb", &gcc_options::x_riscv_crypto_subext, MASK_ZKB},
-  {"zkr", &gcc_options::x_riscv_crypto_subext, MASK_ZKR},
-  {"zkne", &gcc_options::x_riscv_crypto_subext, MASK_ZKNE},
-  {"zknd", &gcc_options::x_riscv_crypto_subext, MASK_ZKND},
-  {"zknh", &gcc_options::x_riscv_crypto_subext, MASK_ZKNH},
-  {"zksed", &gcc_options::x_riscv_crypto_subext, MASK_ZKSED},
-  {"zksh", &gcc_options::x_riscv_crypto_subext, MASK_ZKSH},
-
   {"zpn",  &gcc_options::x_riscv_rvp_subext, MASK_ZPN},
   {"zprv", &gcc_options::x_riscv_rvp_subext, MASK_ZPRV},
   {"zpsf", &gcc_options::x_riscv_rvp_subext, MASK_ZPSF},

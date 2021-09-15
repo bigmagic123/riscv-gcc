@@ -784,9 +784,11 @@ static const riscv_ext_flag_table_t riscv_ext_flag_table[] =
   {"f", &gcc_options::x_target_flags, MASK_HARD_FLOAT},
   {"d", &gcc_options::x_target_flags, MASK_DOUBLE_FLOAT},
   {"c", &gcc_options::x_target_flags, MASK_RVC},
-  {"zpn",  &gcc_options::x_riscv_rvp_subext, MASK_ZPN},
-  {"zprv", &gcc_options::x_riscv_rvp_subext, MASK_ZPRV},
-  {"zpsf", &gcc_options::x_riscv_rvp_subext, MASK_ZPSF},
+  {"v", &gcc_options::x_riscv_rvp_subext, MASK_VECTOR},
+  {"zfh", &gcc_options::x_riscv_rvp_subext, MASK_ZPN},
+  {"p",  &gcc_options::x_riscv_rvp_subext, MASK_ZPN},
+  {"p",  &gcc_options::x_riscv_rvp_subext, MASK_ZPRV},
+  {"p",  &gcc_options::x_riscv_rvp_subext, MASK_ZPSF},
   {NULL, NULL, 0}
 };
 
@@ -794,57 +796,51 @@ static const riscv_ext_flag_table_t riscv_ext_flag_table[] =
    dependent mask bits, in case more than one -march string is passed.  */
 
 static void
-riscv_parse_arch_string (const char *isa, int *flags, location_t loc)
+riscv_parse_arch_string (const char *isa,
+			 struct gcc_options *opts,
+			 location_t loc)
 {
   riscv_subset_list *subset_list;
   subset_list = riscv_subset_list::parse (isa, loc);
   if (!subset_list)
     return;
 
-  if (subset_list->xlen () == 32)
-    *flags &= ~MASK_64BIT;
-  else if (subset_list->xlen () == 64)
-    *flags |= MASK_64BIT;
+  // if (subset_list->xlen () == 32)
+  //   *flags &= ~MASK_64BIT;
+  // else if (subset_list->xlen () == 64)
+  //   *flags |= MASK_64BIT;
 
-  *flags &= ~MASK_RVE;
-  if (subset_list->lookup ("e"))
-    *flags |= MASK_RVE;
 
-  *flags &= ~MASK_MUL;
-  if (subset_list->lookup ("m"))
-    *flags |= MASK_MUL;
 
-  *flags &= ~MASK_ATOMIC;
-  if (subset_list->lookup ("a"))
-    *flags |= MASK_ATOMIC;
 
-  *flags &= ~(MASK_HARD_FLOAT | MASK_DOUBLE_FLOAT);
-  if (subset_list->lookup ("f"))
-    *flags |= MASK_HARD_FLOAT;
 
-  if (subset_list->lookup ("d"))
-    *flags |= MASK_DOUBLE_FLOAT;
 
-  *flags &= ~MASK_RVC;
-  if (subset_list->lookup ("c"))
-    *flags |= MASK_RVC;
 
-  *flags &= ~MASK_DSP;
-  if (subset_list->lookup("p"))
-    *flags |= MASK_DSP;
 
-  *flags &= ~MASK_VECTOR;
-  if (subset_list->lookup ("v"))
-    *flags |= MASK_VECTOR;
 
-  *flags &= ~MASK_RVZFH;
-  if (subset_list->lookup ("zfh"))
+  if (opts)
     {
-      if (!(*flags & MASK_HARD_FLOAT))
-	error_at (loc, "%<-march=%s%>: `zfh` extension requires `f' extension",
-		  isa);
+      const riscv_ext_flag_table_t *arch_ext_flag_tab;
+      /* Clean up target flags before we set.  */
+          for (arch_ext_flag_tab = &riscv_ext_flag_table[0];
+        arch_ext_flag_tab->ext;
+        ++arch_ext_flag_tab)
+        {
+            opts->*arch_ext_flag_tab->var_ref &= ~arch_ext_flag_tab->mask;
+        }
 
-      *flags |= MASK_RVZFH;
+          if (subset_list->xlen () == 32)
+      opts->x_target_flags &= ~MASK_64BIT;
+          else if (subset_list->xlen () == 64)
+      opts->x_target_flags |= MASK_64BIT;
+
+        for (arch_ext_flag_tab = &riscv_ext_flag_table[0];
+      arch_ext_flag_tab->ext;
+      ++arch_ext_flag_tab)
+      {
+            if (subset_list->lookup (arch_ext_flag_tab->ext))
+          opts->*arch_ext_flag_tab->var_ref |= arch_ext_flag_tab->mask;
+      }
     }
 
   if (current_subset_list)
@@ -864,7 +860,7 @@ riscv_handle_option (struct gcc_options *opts,
   switch (decoded->opt_index)
     {
     case OPT_march_:
-      riscv_parse_arch_string (decoded->arg, &opts->x_target_flags, loc);
+      riscv_parse_arch_string (decoded->arg, opts, loc);
       return true;
 
     default:
@@ -882,9 +878,15 @@ riscv_expand_arch (int argc ATTRIBUTE_UNUSED,
   gcc_assert (argc == 1);
   int flags;
   location_t loc = UNKNOWN_LOCATION;
-  riscv_parse_arch_string (argv[0], &flags, loc);
-  _arch_buf = xstrdup (riscv_arch_str (false).c_str ());
-  return _arch_buf;
+  //riscv_parse_arch_string (argv[0], &flags, loc);
+  riscv_parse_arch_string (argv[0], NULL, loc);
+  // _arch_buf = xstrdup (riscv_arch_str (false).c_str ());
+  // return _arch_buf;
+  const std::string arch = riscv_arch_str (false);
+  if (arch.length())
+    return xasprintf ("%s", arch.c_str());
+  else
+    return "";
 }
 
 /* Implement TARGET_OPTION_OPTIMIZATION_TABLE.  */

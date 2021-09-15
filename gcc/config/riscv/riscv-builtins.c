@@ -3198,48 +3198,48 @@ riscv_builtin_decl (unsigned int code, bool initialize_p ATTRIBUTE_UNUSED)
 
 static void
 riscv_prepare_builtin_arg (struct expand_operand *op, tree exp, unsigned argno,
-			   enum insn_code icode, bool has_target_p)
+		enum insn_code icode, bool has_target_p)
 {
-  rtx arg_rtx = expand_normal (CALL_EXPR_ARG (exp, argno));
   enum machine_mode mode = insn_data[icode].operand[argno + has_target_p].mode;
-    
+  rtx arg = expand_normal (CALL_EXPR_ARG (exp, argno));
+  rtx tmp_rtx = gen_reg_rtx (mode);
+
   if (TARGET_ZPN &&
-      !(*insn_data[icode].operand[argno + has_target_p].predicate) (arg_rtx, mode))
-    {
-      rtx tmp_rtx = gen_reg_rtx (mode);
-      if (GET_MODE_SIZE (mode).to_constant() < GET_MODE_SIZE (GET_MODE (arg_rtx)).to_constant())
+      !(*insn_data[icode].operand[argno + has_target_p].predicate) (arg, mode))
+  {
+      if (GET_MODE_SIZE (mode).to_constant() < GET_MODE_SIZE (GET_MODE (arg)).to_constant())
 	{
-	  tmp_rtx = simplify_gen_subreg (mode, arg_rtx, GET_MODE (arg_rtx), 0);
-	  arg_rtx = tmp_rtx;
+	  tmp_rtx = simplify_gen_subreg (mode, arg, GET_MODE (arg), 0);
+	  arg = tmp_rtx;
 	}
-      else if (VECTOR_MODE_P (mode) && CONST_INT_P (arg_rtx))
+      else if (VECTOR_MODE_P (mode) && CONST_INT_P (arg))
 	{
 	  /* Handle CONST_INT covert to CONST_VECTOR.  */
 	  int nunits = GET_MODE_NUNITS (mode).to_constant();
 	  int i, shift = 0;
-    
 	  rtvec v = rtvec_alloc (nunits);
-	  HOST_WIDE_INT val = INTVAL (arg_rtx);
+	  HOST_WIDE_INT val = INTVAL (arg);
 	  enum machine_mode val_mode = GET_MODE_INNER (mode);
 	  int shift_acc = GET_MODE_BITSIZE (val_mode).to_constant();
 	  unsigned HOST_WIDE_INT mask = GET_MODE_MASK (val_mode);
 	  HOST_WIDE_INT tmp_val = val;
+
 	  for (i = 0; i < nunits; i++)
 	    {
-	      tmp_val = (val >> shift) & mask;
-	      RTVEC_ELT (v, i) = gen_int_mode (tmp_val, val_mode);
-	      shift += shift_acc;
+        tmp_val = (val >> shift) & mask;
+        RTVEC_ELT (v, i) = gen_int_mode (tmp_val, val_mode);
+        shift += shift_acc;
 	    }
 
-	  arg_rtx = copy_to_mode_reg (mode, gen_rtx_CONST_VECTOR (mode, v));
+	  arg = copy_to_mode_reg (mode, gen_rtx_CONST_VECTOR (mode, v));
 	}
       else
-	{
-	  convert_move (tmp_rtx, arg_rtx, false);
-	  arg_rtx = tmp_rtx;
-	}
+    {
+      convert_move (tmp_rtx, arg, false);
+      arg = tmp_rtx;
     }
-  create_input_operand (op, arg_rtx, mode);
+  }
+  create_input_operand (op, arg, mode);
 }
 
 /* Expand instruction ICODE as part of a built-in function sequence.

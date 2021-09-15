@@ -4866,6 +4866,7 @@ riscv_hard_regno_nregs (unsigned int regno, machine_mode mode)
     if (maybe_lt (GET_MODE_SIZE (mode), BYTES_PER_RVV_VECTOR))
       return 1;
 
+  if (riscv_vector_mode (mode) && TARGET_VECTOR)
     return exact_div (GET_MODE_SIZE (mode),
 		      BYTES_PER_RVV_VECTOR).to_constant ();
   }
@@ -4895,11 +4896,9 @@ riscv_hard_regno_mode_ok (unsigned int regno, machine_mode mode)
       if (!GP_REG_P (regno + nregs - 1))
 	return false;
 
-      if (VECTOR_MODE_P (mode))
+      if (VECTOR_MODE_P (mode) && TARGET_VECTOR)
 	return false;
 
-      if ((regno % 2 != 0) && (mode == E_DImode) && (!TARGET_64BIT))
-	return false;
     }
   else if (FP_REG_P (regno))
     {

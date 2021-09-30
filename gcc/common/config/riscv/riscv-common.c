@@ -784,7 +784,7 @@ static const riscv_ext_flag_table_t riscv_ext_flag_table[] =
   {"f", &gcc_options::x_target_flags, MASK_HARD_FLOAT},
   {"d", &gcc_options::x_target_flags, MASK_DOUBLE_FLOAT},
   {"c", &gcc_options::x_target_flags, MASK_RVC},
-  {"v", &gcc_options::x_riscv_rvp_subext, MASK_VECTOR},
+  {"v", &gcc_options::x_riscv_rvv_subext, MASK_VECTOR},
   {"zfh", &gcc_options::x_riscv_rvp_subext, MASK_ZPN},
   {"p",  &gcc_options::x_riscv_rvp_subext, MASK_ZPN},
   {"p",  &gcc_options::x_riscv_rvp_subext, MASK_ZPRV},
@@ -809,15 +809,6 @@ riscv_parse_arch_string (const char *isa,
   //   *flags &= ~MASK_64BIT;
   // else if (subset_list->xlen () == 64)
   //   *flags |= MASK_64BIT;
-
-
-
-
-
-
-
-
-
   if (opts)
     {
       const riscv_ext_flag_table_t *arch_ext_flag_tab;

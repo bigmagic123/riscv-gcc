@@ -160,8 +160,6 @@ Mask(RVC)
 
 Mask(RVE)
 
-Mask(VECTOR)
-
 Mask(RVZFH)
 
 Mask(DSP)
@@ -186,3 +184,6 @@ Enum(riscv_align_data) String(natural) Value(riscv_align_data_type_natural)
 
 TargetVariable
 int riscv_rvp_subext
+
+TargetVariable
+int riscv_rvv_subext
